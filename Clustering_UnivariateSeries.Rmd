@@ -1,0 +1,593 @@
+---
+title: "Ciência de Dados - Séries Univariadas"
+author: "Brenner Biasi, Herica Oliveira e Lucas Mascarenhas"
+date: "15 de janeiro de 2019"
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+    code_folding: "show"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## ENGF08 - TOPICOS ESPECIAIS EM ENGENHARIA I
+**Universidade Federal da Bahia - UFBA**
+\
+**[Escola Politécnica](http://www.eng.ufba.br/)**
+\
+**Programa de Pós-Graduação em Engenharia Industrial - [PEI/UFBA](http://www.pei.ufba.br/)**
+\
+**Departamento de Engenharia Química - DEQ**
+\
+**Ciência dos Dados na Engenharia**
+\
+**ENG438 - Tópicos Especiais em Engenharia Química**
+
+****
+
+### Estudo de caso 1 (Fuzzy C-means) - Séries Univariadas
+
+<p style="text-align: justify">Estuo de caso – agrupamento e reconhecimento de padrões em séries univariadas (objetos com o mesmo comprimento)</p>
+
+<p style="text-align: justify">Os arquivos fault.mat e normal.mat contêm, respectivamente, as matrizes tridimensionais mat_f (33 X 1 X 10) e mat_n (33 X 1 X 60) com 10 e 60 objetos de falha e de partida normal de uma turbina a gás. Cada objeto é uma série temporal com 33 instantes de medição ( 16 min) da temperatura de entrada do gás natural na turbina.
+Os valores estão nas dimensões originais. Portanto, devem ser normalizados (entre 0 e 1) com base no máximo e no mínimo de toda a amostra.</p>
+
+### FCM (Euclideana)
+
+<p style="text-align: justify">**a)**	Aplicar o FCM, com distância Euclideana, com 2 e 3 grupos e verificar resultados de classificação (neste caso, é possível usar a função FCM do próprio matlab, ou rodar o fcm com otimização usando o código fá feito em aplicações anteriores);</p>
+
+<p style="text-align: justify">*Antes da aplicação da função FCM é necessário fazer algumas manipulações nos dados. Inicialmente os pacotes de interesse devem ser carregados, depois o banco de dados do estudo de caso importado.*</p>
+
+```{r, eval=FALSE, warning=FALSE, message=FALSE, comment=FALSE}
+# Bibliotecas----
+if(!require("readxl")) install.packages("readxl") ; library(readxl)
+if(!require("caret")) install.packages("caret") ; library(caret)
+if(!require("e1071")) install.packages("e1071") ; library(e1071)
+if(!require("factoextra")) install.packages("factoextra") ; library(factoextra)
+if(!require("cluster")) install.packages("cluster") ; library(cluster)
+if(!require("dtwclust")) install.packages("dtwclust") ; library(dtwclust)
+if(!require("reshape2")) install.packages("reshape2") ; library(reshape2)
+if(!require("dplyr")) install.packages("dplyr") ; library(dplyr)
+if(!require("ggpmisc")) install.packages("ggpmisc") ; library(ggpmisc)
+
+# Importando dados ----
+
+# Apontando para a pasta de trabalho
+setwd("C:/Users/lukas/codes_old/R - Codes/Aulas - ENGD02/Compilado")
+
+# Importando dados de falha
+falhas <- read_excel("C:/Users/lukas/codes_old/R - Codes/Aulas - ENGD02/Compilado/data/dados_falha.xlsx", 
+                     col_names = T)
+
+# Importando dados de partida normal
+normal <- read_excel("C:/Users/lukas/codes_old/R - Codes/Aulas - ENGD02/Compilado/data/dados_normal.xlsx", 
+                     col_names = T)
+
+# Juntando os dados
+total <- cbind(falhas[2:length(falhas)], normal[2:length(normal)])
+
+head(total[4:8], n=10)
+```
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE, comment=FALSE}
+# Bibliotecas----
+if(!require("readxl")) install.packages("readxl") ; library(readxl)
+if(!require("caret")) install.packages("caret") ; library(caret)
+if(!require("e1071")) install.packages("e1071") ; library(e1071)
+if(!require("factoextra")) install.packages("factoextra") ; library(factoextra)
+if(!require("cluster")) install.packages("cluster") ; library(cluster)
+if(!require("dtwclust")) install.packages("dtwclust") ; library(dtwclust)
+if(!require("reshape2")) install.packages("reshape2") ; library(reshape2)
+if(!require("dplyr")) install.packages("dplyr") ; library(dplyr)
+if(!require("ggpmisc")) install.packages("ggpmisc") ; library(ggpmisc)
+
+# Importando dados ----
+
+# Apontando para a pasta de trabalho
+setwd("C:/Users/lukas/codes_old/R - Codes/Aulas - ENGD02/Compilado")
+
+# Importando dados de falha
+falhas <- read_excel("C:/Users/lukas/codes_old/R - Codes/Aulas - ENGD02/Compilado/data/dados_falha.xlsx", 
+                     col_names = T)
+
+# Importando dados de partida normal
+normal <- read_excel("C:/Users/lukas/codes_old/R - Codes/Aulas - ENGD02/Compilado/data/dados_normal.xlsx", 
+                     col_names = T)
+
+# Juntando os dados
+total <- cbind(falhas[2:length(falhas)], normal[2:length(normal)])
+
+head(total[4:8], n=10)
+```
+
+<p style="text-align: justify">*Após a importação dos dados é necessário ainda normalizar e transpor a matriz de dados antes da aplicação das funções.*</p>
+
+```{r, eval=FALSE, warning=FALSE, message=FALSE, comment=FALSE}
+# Normalizando os dados ----
+
+# Funcao que normaliza os dados Max = 1 e Min = 0
+normalizando <- function(x)
+{
+  return((x- min(x)) /(max(x)-min(x)))
+}
+
+# Dados totais
+dados_t <- normalizando(total)
+T_dados_t <- as.data.frame(t(dados_t))
+head(dados_t[4:8], n=10)
+```
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE, comment=FALSE}
+# Normalizando os dados ----
+
+# Funcao que normaliza os dados Max = 1 e Min = 0
+normalizando <- function(x)
+{
+  return((x- min(x)) /(max(x)-min(x)))
+}
+
+# Dados totais
+dados_t <- normalizando(total)
+T_dados_t <- as.data.frame(t(dados_t))
+head(T_dados_t[4:8], n=10)
+```
+
+<p style="text-align: justify">*Com os dados importados e normalizados é interessante uma investigação visual antes da aplicação dos métodos para entender o comportamento das turbinas.*</p>
+
+```{r, eval=FALSE, warning=FALSE, message=FALSE, comment=FALSE}
+# Comportamento geral das turbinas----
+
+g.total <- dados_t %>% 
+  cbind(falhas$Instantes) %>% 
+  melt(id.vars = "falhas$Instantes") %>% 
+  mutate(tempo = `falhas$Instantes`) %>% 
+  select(-`falhas$Instantes`) %>% 
+  ggplot(mapping = aes(x = tempo, y = value)) +
+  geom_line(mapping = aes(color = variable), size = 0.75) +
+  theme_light() +
+  labs(title = "Comportamento da temperatura da turbina de todas as partidas",
+       x = "Tempo (minutos)", y = "Temperatura",
+       subtitle = "Obs: Dados normalizados") +
+  theme(legend.position="none") +
+  geom_smooth(method = "loess", se = TRUE, color = "black", size = 1.5, linetype = 5)
+g.total
+
+g.div <- dados_t %>% 
+  cbind(falhas$Instantes) %>% 
+  melt(id.vars = "falhas$Instantes") %>% 
+  mutate(tempo = `falhas$Instantes`, 
+         operacao = ifelse(grepl("Falha", variable) == T, "Falha", "Normal")) %>% 
+  mutate(operacao = factor(operacao, levels = c("Normal", "Falha"))) %>% 
+  select(-`falhas$Instantes`) %>% 
+  ggplot(mapping = aes(x = tempo, y = value)) +
+  geom_line(mapping = aes(color = variable), size = 0.75) +
+  theme_light() +
+  labs(title = "Comportamento da temperatura da turbina de todas as partidas",
+       x = "Tempo (minutos)", y = "Temperatura",
+       subtitle = "Obs: Dados normalizados") +
+  theme(legend.position="none") +
+  facet_wrap(facets = ~operacao, nrow = 1) +
+  geom_smooth(method = "loess", se = TRUE, color = "black", size = 1.5, linetype = 5)
+g.div
+```
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE, comment=FALSE, fig.align='center'}
+# Comportamento geral das turbinas----
+
+g.total <- dados_t %>% 
+  cbind(falhas$Instantes) %>% 
+  melt(id.vars = "falhas$Instantes") %>% 
+  mutate(tempo = `falhas$Instantes`) %>% 
+  select(-`falhas$Instantes`) %>% 
+  ggplot(mapping = aes(x = tempo, y = value)) +
+  geom_line(mapping = aes(color = variable), size = 0.75) +
+  theme_light() +
+  labs(title = "Comportamento da temperatura da turbina de todas as partidas",
+       x = "Tempo (minutos)", y = "Temperatura",
+       subtitle = "Obs: Dados normalizados") +
+  theme(legend.position="none") +
+  geom_smooth(method = "loess", se = TRUE, color = "black", size = 1.5, linetype = 5)
+g.total
+
+g.div <- dados_t %>% 
+  cbind(falhas$Instantes) %>% 
+  melt(id.vars = "falhas$Instantes") %>% 
+  mutate(tempo = `falhas$Instantes`, 
+         operacao = ifelse(grepl("Falha", variable) == T, "Falha", "Normal")) %>% 
+  mutate(operacao = factor(operacao, levels = c("Normal", "Falha"))) %>% 
+  select(-`falhas$Instantes`) %>% 
+  ggplot(mapping = aes(x = tempo, y = value)) +
+  geom_line(mapping = aes(color = variable), size = 0.75) +
+  theme_light() +
+  labs(title = "Comportamento da temperatura da turbina de todas as partidas",
+       x = "Tempo (minutos)", y = "Temperatura",
+       subtitle = "Obs: Dados normalizados") +
+  theme(legend.position="none") +
+  facet_wrap(facets = ~operacao, nrow = 1) +
+  geom_smooth(method = "loess", se = TRUE, color = "black", size = 1.5, linetype = 5)
+g.div
+```
+
+<p style="text-align: justify">*A representação inicial indica que as partidas que falharam tendem a começar com uma temperatura mais eleveda do que as partidas normais.*</p>
+
+<p style="text-align: justify">*Para aplicação do FCM pode-se utilizar a função* `fanny()` *do pacote **cluster**. Um dos argumentos dessa função é o "metric", através dele é possível definir que a métrica de distância utilizada seja a euclidiana.*</p>
+
+```{r, eval=FALSE, warning=FALSE, message=FALSE, comment=FALSE}
+# Letra (a)----
+
+# Aplicando FCM - 2 grupos (Distancia Euclidiana)
+d_a_2 <- fanny(T_dados_t, k = 2, metric = "euclidean", stand = FALSE)
+
+d1 <- dados_t %>% 
+  cbind(falhas$Instantes) %>% 
+  melt(id.vars = "falhas$Instantes") %>% 
+  mutate(tempo = `falhas$Instantes`, 
+         operacao = ifelse(grepl("Falha", variable) == T, "Falha", "Normal")) %>% 
+  select(-`falhas$Instantes`) %>% 
+  mutate(operacao = factor(operacao, levels = c("Normal", "Falha")))
+
+d2 <- as.data.frame(t(d_a_2$clustering)) %>% 
+  melt() %>% 
+  mutate(op = ifelse(grepl("Normal", variable) == T, 1, 2))
+
+dt.1 <- left_join(d1, d2, by = c("variable")) %>% 
+  mutate(temperatura = value.x, grupo = value.y) %>% 
+  select(-value.x, -value.y) %>% 
+  mutate(grupo = ifelse(grupo == 1, 3, grupo), 
+         grupo = ifelse(grupo == 2, 1, 2))
+
+g.a.1 <- dt.1 %>% 
+  ggplot(mapping = aes(x = tempo, y = temperatura)) +
+  geom_line(mapping = aes(color = variable), size = 0.75) +
+  theme_light() +
+  labs(title = "Comportamento da turbina agrupado por FCM",
+       x = "Tempo (minutos)", y = "Temperatura",
+       subtitle = "Distâncias euclidianas e 2 grupos") +
+  theme(legend.position="none") +
+  geom_smooth(method = "loess", se = TRUE, color = "black", size = 1.5, linetype = 5) +
+  facet_wrap(facets = ~grupo, nrow = 1)
+g.a.1
+
+# Aplicando FCM - 3 grupos (Distancia Euclidiana)
+d_a_3 <- fanny(T_dados_t, k = 3, metric = "euclidean", stand = FALSE)
+
+d3 <- as.data.frame(t(d_a_3$clustering)) %>% 
+  melt()
+
+dt.2 <- left_join(d1, d3, by = c("variable")) %>% 
+  mutate(temperatura = value.x, grupo = value.y) %>% 
+  select(-value.x, -value.y) %>% 
+  mutate(grupo = ifelse(grupo == 3, 4, grupo),
+         grupo = ifelse(grupo == 1, 3, grupo),
+         grupo = ifelse(grupo == 4, 1, grupo))
+
+g.a.2 <- dt.2 %>% 
+  ggplot(mapping = aes(x = tempo, y = temperatura)) +
+  geom_line(mapping = aes(color = variable), size = 0.75) +
+  theme_light() +
+  labs(title = "Comportamento da turbina agrupado por FCM",
+       x = "Tempo (minutos)", y = "Temperatura",
+       subtitle = "Distâncias euclidianas e 3 grupos") +
+  theme(legend.position="none") +
+  geom_smooth(method = "loess", se = TRUE, color = "black", size = 1.5, linetype = 5) +
+  facet_wrap(facets = ~grupo, nrow = 1)
+g.a.2
+```
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE, comment=FALSE, fig.align='center'}
+# Letra (a)----
+
+# Aplicando FCM - 2 grupos (Distancia Euclidiana)
+d_a_2 <- fanny(T_dados_t, k = 2, metric = "euclidean", stand = FALSE)
+
+d1 <- dados_t %>% 
+  cbind(falhas$Instantes) %>% 
+  melt(id.vars = "falhas$Instantes") %>% 
+  mutate(tempo = `falhas$Instantes`, 
+         operacao = ifelse(grepl("Falha", variable) == T, "Falha", "Normal")) %>% 
+  select(-`falhas$Instantes`) %>% 
+  mutate(operacao = factor(operacao, levels = c("Normal", "Falha")))
+
+d2 <- as.data.frame(t(d_a_2$clustering)) %>% 
+  melt() %>% 
+  mutate(op = ifelse(grepl("Normal", variable) == T, 1, 2))
+
+dt.1 <- left_join(d1, d2, by = c("variable")) %>% 
+  mutate(temperatura = value.x, grupo = value.y) %>% 
+  select(-value.x, -value.y) %>% 
+  mutate(grupo = ifelse(grupo == 1, 3, grupo), 
+         grupo = ifelse(grupo == 2, 1, 2))
+
+g.a.1 <- dt.1 %>% 
+  ggplot(mapping = aes(x = tempo, y = temperatura)) +
+  geom_line(mapping = aes(color = variable), size = 0.75) +
+  theme_light() +
+  labs(title = "Comportamento da turbina agrupado por FCM",
+       x = "Tempo (minutos)", y = "Temperatura",
+       subtitle = "Distâncias euclidianas e 2 grupos") +
+  theme(legend.position="none") +
+  geom_smooth(method = "loess", se = TRUE, color = "black", size = 1.5, linetype = 5) +
+  facet_wrap(facets = ~grupo, nrow = 1)
+g.a.1
+
+# Aplicando FCM - 3 grupos (Distancia Euclidiana)
+d_a_3 <- fanny(T_dados_t, k = 3, metric = "euclidean", stand = FALSE)
+
+d3 <- as.data.frame(t(d_a_3$clustering)) %>% 
+  melt()
+
+dt.2 <- left_join(d1, d3, by = c("variable")) %>% 
+  mutate(temperatura = value.x, grupo = value.y) %>% 
+  select(-value.x, -value.y) %>% 
+  mutate(grupo = ifelse(grupo == 3, 4, grupo),
+         grupo = ifelse(grupo == 1, 3, grupo),
+         grupo = ifelse(grupo == 4, 1, grupo))
+
+g.a.2 <- dt.2 %>% 
+  ggplot(mapping = aes(x = tempo, y = temperatura)) +
+  geom_line(mapping = aes(color = variable), size = 0.75) +
+  theme_light() +
+  labs(title = "Comportamento da turbina agrupado por FCM",
+       x = "Tempo (minutos)", y = "Temperatura",
+       subtitle = "Distâncias euclidianas e 3 grupos") +
+  theme(legend.position="none") +
+  geom_smooth(method = "loess", se = TRUE, color = "black", size = 1.5, linetype = 5) +
+  facet_wrap(facets = ~grupo, nrow = 1)
+g.a.2
+```
+
+<p style="text-align: justify">*A aplicação do FCM para 2 grupos segue a tendência indicada na representação inicial, o que se percebe como principal diferença é que após o agrupamento algumas partidas normais que começaram em altas temperaturas foram para o grupo 2, das "falhas", e as partidas de falha que começaram em baixas temperaturam foram para o grupo 1, das partidas normais.*</p>
+
+<p style="text-align: justify">*Já a aplicação para 3 grupos, percebe-se que o grupo das "falhas", que dessa vez é o 3, permanece sem muita alteração, já o grupo de partidas normais foi dividido em dois. Trazendo essas interpretações para o estudo de caso, pode-se indicar como mais apropriada a aplicação do FCM para 2 grupos, onde é possível investigar o agrupamento que representa a maioria das partidas de falha e o agrupamento de partidas normais.*</p>
+
+### FCM (DTW)
+
+<p style="text-align: justify">**b)**	Aplicar o FCM, com a distância DTW, com 2 e 3 grupos. Neste caso a função FCM intrínseca do matlab não se aplica porque está baseada na distância Euclideana (portanto, é necessário rodar otimização calculando a distância do objeto ao centro através do DTW). O matlab possui a função DTW.</p>
+
+<p style="text-align: justify">*Como a função função* `fanny()` *do pacote **cluster** não permite escolher DTW como metrica, a função utilizada para aplicar o FCM é o* `tsclust()` *do pacote **dtwclust**, onde os argumentos "type" e "distance" permitem definir o tipo fuzzy de argupamento e o método DTW para a distância.*</p>
+
+```{r, eval=FALSE, warning=FALSE, message=FALSE, comment=FALSE}
+# Aplicando FCM usando dtw para 2 grupos
+d_dtw.1 <- tsclust(series = T_dados_t, type = "fuzzy", k = 2L, distance = "dtw", centroid = "fcm")
+
+d2.b <- as.data.frame(t(d_a_2$clustering)) %>% 
+  rbind(d_dtw.1@cluster) %>% 
+  slice(-1) %>% 
+  melt() %>% 
+  mutate(op = ifelse(grepl("Normal", variable) == T, 1, 2))
+
+dt.1.b <- left_join(d1, d2.b, by = c("variable")) %>% 
+  mutate(temperatura = value.x, grupo = value.y) %>% 
+  select(-value.x, -value.y)
+
+g.b.1 <- dt.1.b %>% 
+  ggplot(mapping = aes(x = tempo, y = temperatura)) +
+  geom_line(mapping = aes(color = variable), size = 0.75) +
+  theme_light() +
+  labs(title = "Comportamento da turbina agrupado por FCM",
+       x = "Tempo (minutos)", y = "Temperatura",
+       subtitle = "DTW e 2 grupos") +
+  theme(legend.position="none") +
+  geom_smooth(method = "loess", se = TRUE, color = "black", size = 1.5, linetype = 5) +
+  facet_wrap(facets = ~grupo, nrow = 1)
+g.b.1
+
+# Aplicando FCM usando dtw para 3 grupos
+d_dtw.2 <- tsclust(series = T_dados_t, type = "fuzzy", k = 3L, distance = "dtw", centroid = "fcm")
+
+d3.b <- as.data.frame(t(d_a_2$clustering)) %>% 
+  rbind(d_dtw.2@cluster) %>% 
+  slice(-1) %>% 
+  melt()
+
+dt.2.b <- left_join(d1, d3.b, by = c("variable")) %>% 
+  mutate(temperatura = value.x, grupo = value.y) %>% 
+  select(-value.x, -value.y)
+
+g.b.2 <- dt.2.b %>% 
+  ggplot(mapping = aes(x = tempo, y = temperatura)) +
+  geom_line(mapping = aes(color = variable), size = 0.75) +
+  theme_light() +
+  labs(title = "Comportamento da turbina agrupado por FCM",
+       x = "Tempo (minutos)", y = "Temperatura",
+       subtitle = "DTW e 3 grupos") +
+  theme(legend.position="none") +
+  geom_smooth(method = "loess", se = TRUE, color = "black", size = 1.5, linetype = 5) +
+  facet_wrap(facets = ~grupo, nrow = 1)
+g.b.2
+```
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE, comment=FALSE, fig.align='center'}
+# Aplicando FCM usando dtw para 2 grupos
+d_dtw.1 <- tsclust(series = T_dados_t, type = "fuzzy", k = 2L, distance = "dtw", centroid = "fcm")
+
+d2.b <- as.data.frame(t(d_a_2$clustering)) %>% 
+  rbind(d_dtw.1@cluster) %>% 
+  slice(-1) %>% 
+  melt() %>% 
+  mutate(op = ifelse(grepl("Normal", variable) == T, 1, 2))
+
+dt.1.b <- left_join(d1, d2.b, by = c("variable")) %>% 
+  mutate(temperatura = value.x, grupo = value.y) %>% 
+  select(-value.x, -value.y)
+
+g.b.1 <- dt.1.b %>% 
+  ggplot(mapping = aes(x = tempo, y = temperatura)) +
+  geom_line(mapping = aes(color = variable), size = 0.75) +
+  theme_light() +
+  labs(title = "Comportamento da turbina agrupado por FCM",
+       x = "Tempo (minutos)", y = "Temperatura",
+       subtitle = "DTW e 2 grupos") +
+  theme(legend.position="none") +
+  geom_smooth(method = "loess", se = TRUE, color = "black", size = 1.5, linetype = 5) +
+  facet_wrap(facets = ~grupo, nrow = 1)
+g.b.1
+
+# Aplicando FCM usando dtw para 3 grupos
+d_dtw.2 <- tsclust(series = T_dados_t, type = "fuzzy", k = 3, distance = "dtw", centroid = "fcm")
+
+d3.b <- as.data.frame(t(d_a_2$clustering)) %>% 
+  rbind(d_dtw.2@cluster) %>% 
+  slice(-1) %>% 
+  melt()
+
+dt.2.b <- left_join(d1, d3.b, by = c("variable")) %>% 
+  mutate(temperatura = value.x, grupo = value.y) %>% 
+  select(-value.x, -value.y) %>% 
+  mutate(grupo = ifelse(grupo == 3, 4, grupo),
+         grupo = ifelse(grupo == 2, 3, grupo),
+         grupo = ifelse(grupo == 4, 2, grupo))
+
+g.b.2 <- dt.2.b %>% 
+  ggplot(mapping = aes(x = tempo, y = temperatura)) +
+  geom_line(mapping = aes(color = variable), size = 0.75) +
+  theme_light() +
+  labs(title = "Comportamento da turbina agrupado por FCM",
+       x = "Tempo (minutos)", y = "Temperatura",
+       subtitle = "DTW e 3 grupos") +
+  theme(legend.position="none") +
+  geom_smooth(method = "loess", se = TRUE, color = "black", size = 1.5, linetype = 5) +
+  facet_wrap(facets = ~grupo, nrow = 1)
+g.b.2
+```
+
+<p style="text-align: justify">*Visivelmente a diferença entre o FCM usando a distância euclidiana e o FCM usando o DTW é bem pequena, então uma matriz de confusão é gerada considerando a abordagem de 2 grupos para os resultados da letra a) e letra b). Para isso a função* `confusionMatrix()` *do pacote **caret** é utilizada.*</p>
+
+```{r, eval=FALSE, warning=FALSE, message=FALSE, comment=FALSE}
+# Comparando matriz de confusão de A(Euclidiana) x B(DTW)
+dx.a <- confusionMatrix(table(d2$value, d2$op))
+
+dx.a <- as.data.frame(t(dx.a$byClass)) %>% 
+  melt()
+
+dx.b <- confusionMatrix(table(d2.b$value, d2.b$op))
+
+dx.b <- as.data.frame(t(dx.b$byClass)) %>% 
+  melt() %>% 
+  left_join(dx.a, by = "variable") %>% 
+  rename("index" = variable, "DTW" = value.x, "Euclidean" = value.y) %>% 
+  melt() %>% 
+  rename("Method" = variable)
+
+g.compare.1 <- ggplot(dx.b) +
+  geom_point(mapping = aes(x = index, y = value, color = Method), size = 5, alpha = 0.6) +
+  theme_light() +
+  labs(title = "Comparing: DTW vs Euclidean",
+       x = "", y = "Value") +
+  theme(legend.position="top") +
+ theme(axis.text.x = element_text(angle = 90))
+g.compare.1
+```
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE, comment=FALSE, fig.align='center'}
+# Comparando matriz de confusão de A(Euclidiana) x B(DTW)
+dx.a <- confusionMatrix(table(d2$value, d2$op))
+
+dx.a <- as.data.frame(t(dx.a$byClass)) %>% 
+  melt()
+
+dx.b <- confusionMatrix(table(d2.b$value, d2.b$op))
+
+dx.b <- as.data.frame(t(dx.b$byClass)) %>% 
+  melt() %>% 
+  left_join(dx.a, by = "variable") %>% 
+  rename("index" = variable, "DTW" = value.x, "Euclidean" = value.y) %>% 
+  melt() %>% 
+  rename("Method" = variable)
+
+g.compare.1 <- ggplot(dx.b) +
+  geom_point(mapping = aes(x = index, y = value, color = Method), size = 5, alpha = 0.6) +
+  theme_light() +
+  labs(title = "Comparing: DTW vs Euclidean",
+       x = "", y = "Value") +
+  theme(legend.position="top") +
+ theme(axis.text.x = element_text(angle = 90))
+g.compare.1
+```
+
+<p style="text-align: justify">*Observando o resultado gráfico é possível indicar o método DTW como superior. Apenas na prevalência os métodos se equivalem, em todos os outrso o DTW apresenta um desempenho superior.*</p>
+
+### Fusão
+
+<p style="text-align: justify">**1** - Verificar se houve coalescência/fusão entre os grupos (o que indica que não houve sucesso no agrupamento);</p>
+
+<p style="text-align: justify">*O índice de silhueta varia de −1 a +1, em que um valor alto indica que o objeto é bem compatível com seu próprio cluster e mal combinado com os clusters vizinhos. Se a maioria dos objetos tiver um valor alto, a configuração de cluster será apropriada. Então através da função* `fviz_silhouette()` *do pacote **factoextra** é possível representar gráficamente o índice para os objetos dos grupos.*</p>
+
+```{r, eval=FALSE, warning=FALSE, message=FALSE, comment=FALSE}
+# Avaliando a qualidade do agrupamento para 2 grupos
+g.sil.2 <- fviz_silhouette(d_a_2, palette = "jco", ggtheme = theme_light())
+g.sil.2
+
+# Avaliando a qualidade do agrupamento para 3 grupos
+g.sil.3 <- fviz_silhouette(d_a_3, palette = "jco", ggtheme = theme_light())
+g.sil.3
+```
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE, comment=FALSE, fig.align='center'}
+# Avaliando a qualidade do agrupamento para 2 grupos
+g.sil.2 <- fviz_silhouette(d_a_2, palette = "jco", ggtheme = theme_light())
+g.sil.2
+
+# Avaliando a qualidade do agrupamento para 3 grupos
+g.sil.3 <- fviz_silhouette(d_a_3, palette = "jco", ggtheme = theme_light())
+g.sil.3
+```
+
+<p style="text-align: justify">*A aplicação do silhueta aos resultados da letra a) indica que as abordagens podem ser consideradas satisfatórias, sendo o agrupamento por 2 grupos o que retorna melhor índice. Trazendo para interpretação do problema, já era esparo que a abordagem por 2 grupos fosse a mais indicada, já que deseja-se entender os padrões de falha.*</p>
+
+### Padrões
+
+<p style="text-align: justify">**2** - Verificar os padrões reconhecidos.</p>
+
+```{r, eval=FALSE, warning=FALSE, message=FALSE, comment=FALSE}
+g.b.1
+```
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE, comment=FALSE, fig.align='center'}
+g.b.1
+```
+
+<p style="text-align: justify">*Considerando a aplicação do FCM utilizando DTW, já que apresenta um desempenho melhor do que utilizando a métrica euclidiana, para uma abordagem de 2 grupos, por apresentar um índice de silhueta maior do que para 3 grupos, é possível entender que o grupo de interesse ainda mantém a característica da investigação inicial, ou seja, o agrupamento que representa o grupo de partidas que falharam continua com uma curva de tendência parecida, a partida já começa com uma temperatua elevada em comparação com as partidas normais.*</p>
+
+```{r, eval=FALSE, warning=FALSE, message=FALSE, comment=FALSE}
+confusionMatrix(table(d2.b$value, d2.b$op))$overall
+```
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE, comment=FALSE, fig.align='center'}
+confusionMatrix(table(d2.b$value, d2.b$op))$overall
+```
+
+<p style="text-align: justify">*Calculando a acurácia através da função* `confusionMatrix()` *do pacote **caret** que já foi utilizada em outro momento desse mesmo desenvolvimento, o agrupamento em análise retorna um valor de **0.7857**. *</p>
+
+### Observação:
+<p style="text-align: justify">**Se você está tentando reproduzir este código talvez o gráfico "Comparing: DTW vs Euclidean" e os valores de acurácia apresentados não sejam os mesmos que você encontrou. Isso se deve a um problema que encontrei de combinar os levels dos agrupamentos, aparentemente por mais que eu "set" os levels dos grupos, a função nomeia de forma aleatória quem é o "grupo 1" e quem é o "grupo 2". Seguem abaixo alguns links que podem ajudar a solucionar este problema.**</p>
+
+* https://stackoverflow.com/questions/5490638/how-to-change-the-order-of-facet-labels-in-ggplot-custom-facet-wrap-labels
+* https://stackoverflow.com/questions/15116081/controlling-order-of-facet-grid-facet-wrap-in-ggplot2
+* https://stackoverflow.com/questions/18413756/re-ordering-factor-levels-in-data-frame
+
+
+****
+
+**Discentes:**
+\
+**[Brenner Silva](http://lattes.cnpq.br/8005291514473676)**;
+\
+**[Herica Oliveira](http://lattes.cnpq.br/4181714806448813)**;
+\
+**[Lucas Mascarenhas](http://lattes.cnpq.br/9440856373742866)**.
+
+\
+
+**Docentes:**
+\
+**[Cristiano Fontes](http://lattes.cnpq.br/8533422209857268)**;
+\
+**[Karla Esquerre](http://lattes.cnpq.br/1956096628005272)**.
+
+\
+
+[<img src="http://gamma.ufba.br/images/logoRStudio.png" height="400px" width="300px" />](http://gamma.ufba.br/)

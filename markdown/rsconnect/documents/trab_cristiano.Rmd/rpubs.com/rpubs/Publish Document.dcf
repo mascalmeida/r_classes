@@ -1,0 +1,10 @@
+name: Publish Document
+title:
+username:
+account: rpubs
+server: rpubs.com
+hostUrl: rpubs.com
+appId: https://api.rpubs.com/api/v1/document/459056/a6e222d5ec04496c91287acf47d7718c
+bundleId: https://api.rpubs.com/api/v1/document/459056/a6e222d5ec04496c91287acf47d7718c
+url: http://rpubs.com/L_Mascarenhas/459056
+when: 1547815267.51921
