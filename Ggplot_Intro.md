@@ -1,0 +1,583 @@
+Introdução a representação gráfica com **ggplot**
+================
+Lucas Mascarenhas Almeida
+November 20, 2017
+
+<center>
+
+[![Gamma](C:\\Users\\lukas\\codes_old\\R%20-%20Codes\\Aulas%20-%20ENGD02\\Compilado\\imgs\\logo_gamma.png)](http://www.gamma.ufba.br/)
+
+</center>
+
+## O que é **ggplot** ?
+
+<p style="text-align: justify">
+
+O [ggplot 2](http://ggplot2.org/) é um pacote da empresa
+[Rstudio](https://www.rstudio.com/) de visualização de dados aprimorado
+para o R, ele fornece um poderoso modelo de gráficos que facilita a
+produção de gráficos multi-camadas.
+
+</p>
+
+Para saber mais sobre **ggplot**:
+
+  - [Documentação do pacote](http://ggplot2.tidyverse.org/reference/).
+    Descrição de todas as funções do pacote.
+  - [Top 50
+    gglpot2](http://r-statistics.co/Top50-Ggplot2-Visualizations-MasterList-R-Code.html).
+    Tutorial que ajuda você a escolher o tipo certo de gráfico para seus
+    objetivos específicos e como implementá-lo.
+  - [Galeria de gráficos do
+    ggplot2](http://www.r-graph-gallery.com/portfolio/ggplot2-package/).
+  - [R for Data Science](http://r4ds.had.co.nz/data-visualisation.html).
+    O capítulo 3 trata da representação de dados utilizando o R.
+
+## Aula prática - Introdução ao **ggplot**
+
+<p style="text-align: justify">
+
+O banco de dados utilizado nesta aula pode ser acessado no link:
+[Arquivos para
+aula](https://drive.google.com/drive/folders/1bqSQkJ-kL2XxdJbLNgtEAf-eG-t175rd).
+Apesar da tratativa se restringir a esse banco de dados, todos os
+códigos apresentados durante a aula podem ser utilizados em qualquer
+outro banco de dados que contenha as mesmas características deste. Neste
+mesmo link também é possível baixar um arquivo que contém a paleta de
+cores do R e seus respectivos nomes.
+
+</p>
+
+<center>
+
+![Banco de dados utilizado -
+EconmistData](C:\\Users\\lukas\\codes_old\\R%20-%20Codes\\Aulas%20-%20ENGD02\\Compilado\\imgs\\bancodedados.JPG)
+
+</center>
+
+<center>
+
+Banco de dados utilizado - EconmistData
+
+</center>
+
+<p style="text-align: justify">
+
+O banco de dados apresenta o Índice de Desenvolvimento Humano (HDI) e o
+Índice de Percepção de Corrupção (CPI) para vários países. São dados do
+[Transparency International](https://www.transparency.org/).
+
+</p>
+
+<p style="text-align: justify">
+
+O primeiro passo é instalar e chamar todos o pacotes que serão
+utilizados durante o desenvolvimento do código.
+
+</p>
+
+``` r
+# Chamando biblioteca, se ainda nao estiver instalada use, ex: install.packages("ggplot2")
+
+if(!require("ggplot2")) install.packages("ggplot2") ; library(ggplot2)  
+if(!require("ggrepel")) install.packages("ggrepel") ; library(ggrepel)
+if(!require("ggExtra")) install.packages("ggExtra") ; library(ggExtra)
+if(!require("gridExtra")) install.packages("gridExtra") ; library(gridExtra)
+if(!require("plotly")) install.packages("plotly") ; library(plotly)
+```
+
+<p style="text-align: justify">
+
+Os pacotes que foram instalados tem como função complementar o
+**ggplot**, aumentado as possibilidades de manipulação gráfica. Ao longo
+do desenvolvimento do código as funções serão referênciadas aos seus
+respectivos pacotes.
+
+</p>
+
+<p style="text-align: justify">
+
+Após a instalação dos pacotes, deve-se importar o banco de dados de
+interesse. O tipo de arquivo utilizado é CSV, que significa
+Comma-separated values (valores separados por vírgula). É um arquivo de
+apenas uma planilha que contém dados separados por um sinal de
+pontuação, como vírgula, ponto e vírgula ou ponto. A função
+`read.csv()` é utilizada para importação deste tipo de arquivo.
+
+</p>
+
+``` r
+# Importando dados do tipo .csv
+
+EconomistData <- read.csv("C:/Users/lukas/codes_old/R - Codes/Aulas - ENGD02/Compilado/data/EconomistData.csv")
+```
+
+<p style="text-align: justify">
+
+**Motivação\!\!** Existem outros pacotes gráficos disponíveis para o R,
+inclusive um residente que disponibiliza ao úsuario uma boa variedade de
+representações. Então porque usar o **ggplot**? Dentre outras vantagens
+veremos nesta aula que o pacote residente exige uma programação muito
+mais trabalhosa, com inúmeras linhas de códigos para uma representação
+gráfica que pode ser feita com igual ou melhor detalhamento usando
+poucas linhas de **ggplot**.
+
+</p>
+
+<p style="text-align: justify">
+
+Então inicialmente a nível de comparação um gráfico de dispersão é
+plotado usando a função residente `plot()` do R.
+
+</p>
+
+``` r
+# Grafico de dispersao usando a funcao residente 'plot()'
+
+plot(x = EconomistData$CPI, y = EconomistData$HDI, 
+     xlab = "CPI", ylab = "HDI")
+```
+
+<center>
+
+![](Ggplot_Intro_files/figure-gfm/unnamed-chunk-4-1.png)<!-- -->
+
+</center>
+
+<p style="text-align: justify">
+
+Se o objetivo é representar de maneira simples e rápida a dispersão dos
+dados, o pacote residente é suficiente, mas para uma investigação mais
+profunda do banco de dados o uso do **ggplot** é vantajoso, permitindo
+que uma grande quantidade de informações sejam representadas com poucas
+linhas de código.
+
+</p>
+
+``` r
+# Gráfico de Dispersão usando ggplot
+
+gdisp1 <- ggplot(EconomistData, mapping = aes(x = CPI, y = HDI)) +              # Mapeando as variaveis
+  geom_point(aes(color = Region, size = HDI.Rank),alpha = 0.8) +                # Graficos de dispersao
+  scale_color_manual(values = 
+                       c("peru","gold","green","darkblue","hotpink3","red4")    # Definindo as cores de color
+  xlab("Índice de Percepção da Corrupção") +                                    # Nomeando a Ox
+  ylab("Índice de Desenvolvimento Humano") #+                                   # Nomeando Oy
+  #geom_text_repel(aes(label = Country))                                        # Adicionando os nomes
+```
+
+<center>
+
+![](Ggplot_Intro_files/figure-gfm/unnamed-chunk-6-1.png)<!-- -->
+
+</center>
+
+<p style="text-align: justify">
+
+Adicionamos quase todas as informações do banco de daos em um única
+representação, a informação que está faltando é *Country*. Está variável
+pode ser adicionada usando a função `geom_text_repel(aes(label =
+Country))` que está comentada no script, está função é do
+`library(ggrepel)` e ela referencia cada ponto com o texto do label
+escolhido. Aqui não será apresentado o resultado do uso desta função,
+pois poluirá a representação, mas testes são bem vindos para entender um
+pouco melhor o resultado da sua utilização, ela pode ser muito útil
+quando se tem siglas ao invés de nomes.
+
+</p>
+
+<p style="text-align: justify">
+
+Existem variadas formas de representar as mesmas informações utilizando
+**ggplot**, então para explorar um pouco mais o potencial do pacote
+serão apresentados mais dois gráficos exibindo as mesmas variáveis, mas
+utilizando outras funções e novas estéticas.
+
+</p>
+
+``` r
+gdisp2 <- ggplot(EconomistData, mapping = aes(x = CPI, y = HDI)) +
+  geom_point(aes(color = HDI.Rank, shape = Region), size = 3) +      # Adicionando simbolos
+  xlab("Índice de Percepção da Corrupção") + 
+  ylab("Índice de Desenvolvimento Humano")
+```
+
+<center>
+
+![](Ggplot_Intro_files/figure-gfm/unnamed-chunk-8-1.png)<!-- -->
+
+</center>
+
+<p style="text-align: justify">
+
+A principal mudança foi a troca da estética da variável *Region*, agora
+as regiões são representadas por símbolos (*shape*). Também é
+interessante observar o comportamento da estética *color*, antes quando
+está estética representava uma variável categórica as cores eram bem
+definidas e de fácil destinção, agora que *color* é a estética de uma
+variável númerica contínua, ela passa a se comportar como um gradiente.
+
+</p>
+
+``` r
+gdisp3 <- ggplot(EconomistData, mapping = aes(x = CPI, y = HDI)) +
+  geom_point(aes(color = HDI.Rank), size = 3) +
+  facet_wrap(~Region, ncol = 3) +                                        # Dividindo por região
+  xlab("Índice de Percepção da Corrupção") + 
+  ylab("Índice de Desenvolvimento Humano")
+```
+
+<center>
+
+![](Ggplot_Intro_files/figure-gfm/unnamed-chunk-10-1.png)<!-- -->
+
+</center>
+
+<p style="text-align: justify">
+
+Adicionando a função `facet_wrap(~Region, ncol = 3)` é possível observar
+o comportamento dos pontos exclusivamente para cada região, essa função
+também permite escolher a quantidade de colunas/linhas que será exibida.
+
+</p>
+
+<p style="text-align: justify">
+
+O **ggplot** permite que o usuário armazene o gráfico criado em objetos,
+possibilitando a utilização deste objeto em qualquer momento do código
+após a sua criação, extinguindo a necessidade da construção do gráfico
+novamente, outra facilidade é que o pacote trás uma função exclusiva
+para salvar as representações criadas, permitindo alterar diversas
+características da imagem, inclusive a quantidade de dpi.
+
+</p>
+
+<p style="text-align: justify">
+
+Ainda é possível unir em uma única imagem as três representações
+produzidas. Para isso é necessário utilizar a função `grid.arrange()` do
+pacote `library(gridExtra)`.
+
+</p>
+
+``` r
+gdisp <- grid.arrange(gdisp1, gdisp2, gdisp3, nrow = 3)                         # Colocando todos juntos
+
+ggsave(filename = "gdisp.jpeg", gdisp,                                          # Salvando grafico
+       width = 13, height = 21, dpi = 300)
+```
+
+<center>
+
+![](Ggplot_Intro_files/figure-gfm/unnamed-chunk-12-1.png)<!-- -->
+
+</center>
+
+<p style="text-align: justify">
+
+O pacote trás uma família de funções do tipo *geom\_*, por enquanto
+apenas a função `geom_point()` foi utilizada. É possível combinar
+gráficos adicionando mais uma camada que contém o gráfico de interesse,
+para o exemplo as funções `geom_smooth()` e `geom_rug()` serão
+adicionadas.
+
+</p>
+
+``` r
+gcurve <- ggplot(EconomistData, mapping = aes(x = CPI, y = HDI)) +
+  geom_point(aes(color = HDI.Rank), size = 1) +
+  geom_rug(col="steelblue",alpha=0.5, size=1.5) +                               # Adicionando rug
+  xlab("Índice de Percepção da Corrupção") + 
+  ylab("Índice de Desenvolvimento Humano") +
+  facet_wrap(~Region, ncol = 3) +
+  geom_smooth(method = "lm", se = TRUE)                                         # Adicionando curva de ajuste
+```
+
+<center>
+
+![](Ggplot_Intro_files/figure-gfm/unnamed-chunk-14-1.png)<!-- -->
+
+</center>
+
+<p style="text-align: justify">
+
+É possível também adicionar gráficos marginais a um gráfico do tipo
+**ggplot** utilizando a função `ggMarginal()` do pacote
+`library(ggExtra)`. Para exemplificar essa combinação será utilizado o
+primeiro gráfico (gdisp1).
+
+</p>
+
+``` r
+gcurve2 <- ggplot(EconomistData, mapping = aes(x = CPI, y = HDI)) +
+  geom_point(aes(color = Region, size = HDI.Rank),alpha = 0.8) +
+  xlab("Índice de Percepção da Corrupção") + 
+  ylab("Índice de Desenvolvimento Humano") +
+  geom_smooth(method = "lm", se = TRUE) +
+  geom_rug(col="steelblue",alpha=0.1, size=1.5) +
+  theme(legend.position="none") +                                                         # Tirando as legendas
+  coord_flip()                                                                            # Trocando eixos
+
+gcmb <- ggMarginal(gcurve2, type="boxplot", color="black", size=4)                        # Adicionando boxplot
+```
+
+<center>
+
+![](Ggplot_Intro_files/figure-gfm/unnamed-chunk-16-1.png)<!-- -->
+
+</center>
+
+<p style="text-align: justify">
+
+De forma bem objetiva histogramas e gráficos de densidade podem ser
+criados utilizando respectivamente as funções `geom_histogram` e
+`geom_density`.
+
+</p>
+
+``` r
+gHDI <- ggplot(EconomistData, mapping = aes(x = HDI)) +
+  geom_histogram(color = "black", fill = "paleturquoise", bins = 30) +                    # Criando histograma
+  geom_density(kernel = "gaussian", size = 1, aes(y = 0.05 * ..count..))  +                                          # Adicionando grafico de densidade
+  xlab("Índice de Desenvolvimento Humano") + 
+  ylab("Frequência")
+
+gCPI <- ggplot(EconomistData, mapping = aes(x = CPI)) +
+  geom_histogram(color = "black", fill = "palegreen", bins = 30) +
+  geom_density(kernel = "gaussian", size = 1, aes(y = 0.5 * ..count..)) +
+  xlab("Índice de Percepção da Corrupção") + 
+  ylab("Frequência")
+
+graph <- grid.arrange(gcmb, arrangeGrob(gCPI, gHDI, ncol=2), nrow = 2)                             # Colocando todos juntos
+
+ggsave(filename = "graph.jpeg", graph,                                                    # Salvando grafico
+       width = 13, height = 14, dpi = 300)
+```
+
+<center>
+
+![](Ggplot_Intro_files/figure-gfm/unnamed-chunk-18-1.png)<!-- -->
+
+</center>
+
+### Para além do **ggplot**:
+
+<p style="text-align: justify">
+
+Apesar do enorme potencial o **ggplot** tem limitações, principalmente
+quando se trata de interações, mas algumas dessas limitações podem ser
+superadas com a utilização de outros pacotes. Para aumentar a
+interatividade do gráfico pode-se utilizar a função `ggplotly()` do
+pacote `library(plotly)`.
+
+</p>
+
+``` r
+ggplotly(gcurve2)      # adicionando interação ao gráfico
+```
+
+<center>
+
+![](Ggplot_Intro_files/figure-gfm/unnamed-chunk-20-1.png)<!-- -->
+
+</center>
+
+<p style="text-align: justify">
+
+Afim de instigar o lado desenvolvedor dos alunos dentro da ferramenta R,
+um exemplo de geolocalização interativa é apresentado a seguir.
+
+</p>
+
+``` r
+if(!require("readxl")) install.packages("readxl") ; library(readxl)
+if(!require("tidyr")) install.packages("tidyr") ; library(tidyr)
+if(!require("dplyr")) install.packages("dplyr") ; library(dplyr)
+if(!require("leaflet")) install.packages("leaflet") ; library(leaflet)
+
+## Importando dados
+dados_et <- read_excel("C:/Users/lukas/codes_old/R - Codes/Aulas - ENGD02/Compilado/data/ovni.xlsx", 
+                       col_types = c("date", "text", "text", 
+                                     "text", "text", "numeric", "text", 
+                                     "text", "date", "numeric", "numeric"))
+
+## manipulando
+d_ovni <- dados_et %>% 
+  select(datetime, city, state, country, shape, latitude, longitude) %>%
+  separate(col = datetime, into = c("Data", "Hora"), sep = "\\ ") %>% 
+  filter(shape == "disk" & state == "tx") %>% 
+  na.omit() %>% 
+  mutate(lat = latitude/10000000, lon = longitude/10000000)
+
+## leaflet
+leaflet(data = d_ovni) %>% 
+  addTiles() %>%              # Add default OpenStreetMap map tiles
+  addMarkers(~lon, ~lat, popup = ~shape, clusterOptions = markerClusterOptions())
+### Mudando o marcador para circulos
+leaflet(data = d_ovni) %>% 
+  addTiles() %>% 
+  addCircleMarkers(lng =~lon,lat =~lat, popup = ~shape,
+                   clusterOptions = markerClusterOptions())
+```
+
+<center>
+
+![](Ggplot_Intro_files/figure-gfm/unnamed-chunk-22-1.png)<!-- -->
+
+</center>
+
+### Stack Overflow:
+
+<p style="text-align: justify">
+
+O [Stack Overflow](https://stackoverflow.com/) é uma comunidade que vai
+facilitar muito o desenvolvimento de um iniciante na ferramenta R.
+
+</p>
+
+<p style="text-align: justify">
+
+Fundada em 2008, o Stack Overflow é a maior e mais confiável comunidade
+online voltada para programação. A proposta desta comunidade é criar um
+ambiente para que os desenvolvedores aprendam, compartilhem seus
+conhecimentos e desenvolvam suas carreiras. Mais de 50 milhões de
+programadores profissionais e amadores visitam Stack Overflow todo mês
+para ajudar a resolver problemas de programação e desenvolver novas
+habilidades.
+
+</p>
+
+### Script completo:
+
+``` r
+############################################################################################################################
+
+########################################## ENGD02 ##########################################################################
+
+############################################################################################################################
+
+# Apontando para a pasta de trabalho
+
+setwd("C:/Users/lukas/codes_old/R - Codes/Aulas - ENGD02/Compilado")
+
+########################################## Library #########################################################################
+
+# Chamando biblioteca, se ainda nao estiver instalada use, ex: install.packages("ggplot2")
+
+if(!require("ggplot2")) install.packages("ggplot2") ; library(ggplot2)  
+if(!require("ggrepel")) install.packages("ggrepel") ; library(ggrepel)
+if(!require("ggExtra")) install.packages("ggExtra") ; library(ggExtra)
+if(!require("gridExtra")) install.packages("gridExtra") ; library(gridExtra)
+if(!require("plotly")) install.packages("plotly") ; library(plotly)
+
+########################################### Data ###########################################################################
+
+# Importando dados do tipo .csv
+
+EconomistData <- read.csv("C:/Users/lukas/codes_old/R - Codes/Aulas - ENGD02/Compilado/data/EconomistData.csv")
+
+########################################## Pacote Básico ###################################################################
+
+# Grafico de dispersao usando a funcao residente 'plot()'
+
+plot(x = EconomistData$CPI, y = EconomistData$HDI, 
+     xlab = "CPI", ylab = "HDI")
+
+########################################## Usando ggplot ###################################################################
+
+# Gráfico de Dispersão
+
+gdisp1 <- ggplot(EconomistData, mapping = aes(x = CPI, y = HDI)) +                        # Mapeando as variaveis
+  geom_point(aes(color = Region, size = HDI.Rank),alpha = 0.8) +                          # Graficos de dispersao
+  scale_color_manual(values = c("peru","gold","green","darkblue","hotpink3","red4")) +    # Definindo as cores de color
+  xlab("Índice de Percepção da Corrupção") +                                              # Nomeando a Ox
+  ylab("Índice de Desenvolvimento Humano") +                                              # Nomeando Oy
+  geom_text_repel(aes(label = Country))                                                   # Adicionando os nomes
+
+gdisp2 <- ggplot(EconomistData, mapping = aes(x = CPI, y = HDI)) +
+  geom_point(aes(color = HDI.Rank, shape = Region), size = 3) +                           # Adicionando simbolos
+  geom_text_repel(aes(label = Country)) +
+  xlab("Índice de Percepção da Corrupção") + 
+  ylab("Índice de Desenvolvimento Humano")
+
+gdisp3 <- ggplot(EconomistData, mapping = aes(x = CPI, y = HDI)) +
+  geom_point(aes(color = HDI.Rank), size = 3) +
+  geom_text_repel(aes(label = Country)) +
+  facet_wrap(~Region, ncol = 3) +                                                         # Dividindo por região
+  xlab("Índice de Percepção da Corrupção") + 
+  ylab("Índice de Desenvolvimento Humano")
+
+gdisp <- grid.arrange(gdisp1, gdisp2, gdisp3, nrow = 3)                                   # Colocando todos juntos
+
+ggsave(filename = "gdisp.jpeg", gdisp,                                                    # Salvando grafico
+       width = 13, height = 21, dpi = 300)
+
+# Graficos combinados
+
+gcurve <- ggplot(EconomistData, mapping = aes(x = CPI, y = HDI)) +
+  geom_point(aes(color = HDI.Rank), size = 1) +
+  geom_rug(col="steelblue",alpha=0.5, size=1.5) +                                         # Adicionando rug
+  xlab("Índice de Percepção da Corrupção") + 
+  ylab("Índice de Desenvolvimento Humano") +
+  facet_wrap(~Region, ncol = 3) +
+  geom_smooth(method = "lm", se = TRUE)                                                   # Adicionando curva de ajuste
+
+gcurve2 <- ggplot(EconomistData, mapping = aes(x = CPI, y = HDI)) +
+  geom_point(aes(color = Region, size = HDI.Rank),alpha = 0.8) +
+  xlab("Índice de Percepção da Corrupção") + 
+  ylab("Índice de Desenvolvimento Humano") +
+  geom_smooth(method = "lm", se = TRUE) +
+  geom_rug(col="steelblue",alpha=0.1, size=1.5) +
+  theme(legend.position="none") +                                                         # Tirando as legendas
+  coord_flip()                                                                            # Trocando eixos
+
+gcmb <- ggMarginal(gcurve2, type="boxplot", color="black", size=4)                        # Adicionando boxplot
+
+gHDI <- ggplot(EconomistData, mapping = aes(x = HDI)) +
+  geom_histogram(color = "black", fill = "paleturquoise", bins = 30) +                    # Criando histograma
+  geom_density(kernel = "gaussian", size = 1)  +                                          # Adicionando grafico de densidade
+  xlab("Índice de Desenvolvimento Humano") + 
+  ylab("Frequência")
+
+gCPI <- ggplot(EconomistData, mapping = aes(x = CPI)) +
+  geom_histogram(color = "black", fill = "palegreen", bins = 30) +
+  geom_density(kernel = "gaussian", size = 1) +
+  xlab("Índice de Percepção da Corrupção") + 
+  ylab("Frequência")
+
+graph <- grid.arrange(gcmb, arrangeGrob(gCPI, gHDI, ncol=2), nrow = 2)                             # Colocando todos juntos
+
+ggsave(filename = "graph.jpeg", graph,                                                    # Salvando grafico
+       width = 13, height = 14, dpi = 300)
+
+########################################## Extra - leaflet ################################################################
+
+if(!require("readxl")) install.packages("readxl") ; library(readxl)
+if(!require("tidyr")) install.packages("tidyr") ; library(tidyr)
+if(!require("dplyr")) install.packages("dplyr") ; library(dplyr)
+if(!require("leaflet")) install.packages("leaflet") ; library(leaflet)
+
+## Importando dados
+dados_et <- read_excel("C:/Users/lukas/codes_old/R - Codes/Aulas - ENGD02/Compilado/data/ovni.xlsx", 
+                       col_types = c("date", "text", "text", 
+                                     "text", "text", "numeric", "text", 
+                                     "text", "date", "numeric", "numeric"))
+
+## manipulando
+d_ovni <- dados_et %>% 
+  select(datetime, city, state, country, shape, latitude, longitude) %>%
+  separate(col = datetime, into = c("Data", "Hora"), sep = "\\ ") %>% 
+  filter(shape == "disk" & state == "tx") %>% 
+  na.omit() %>% 
+  mutate(lat = latitude/10000000, lon = longitude/10000000)
+
+## leaflet
+leaflet(data = d_ovni) %>% 
+  addTiles() %>%              # Add default OpenStreetMap map tiles
+  addMarkers(~lon, ~lat, popup = ~shape, clusterOptions = markerClusterOptions())
+```
+
+## Referências:
+
+  - <http://www.estatisticacomr.uff.br/?p=176>
+  - <http://tutorials.iq.harvard.edu/R/Rgraphics/Rgraphics.html>
