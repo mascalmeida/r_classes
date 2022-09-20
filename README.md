@@ -5,3 +5,7 @@ Repositório dedicado aos códigos desenvolvidos no R/Rstudio durantes as aulas 
 <p align="center">
   <img width="400" height="310" src="https://www.business-science.io/assets/2020-10-15-must-know-tidyverse-features/tidyverse-icons.png">
 </p>
+
+
+## Support
+Give a ⭐️ if you like this project!
